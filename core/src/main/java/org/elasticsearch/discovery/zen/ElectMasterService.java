@@ -225,6 +225,13 @@ public class ElectMasterService extends AbstractComponent {
         if (!o1.isMasterNode() && o2.isMasterNode()) {
             return 1;
         }
+        //Both o1 and o2 are MasterNode
+         if (!o1.isIngestNode() && o2.isIngestNode()) {
+             return -1;
+         }
+         if (o1.isIngestNode() && !o2.isIngestNode()) {
+             return 1;
+         }
         return o1.getId().compareTo(o2.getId());
     }
 }
