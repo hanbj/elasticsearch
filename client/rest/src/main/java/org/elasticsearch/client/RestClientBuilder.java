@@ -28,6 +28,8 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.nio.conn.SchemeIOSessionStrategy;
 
+import java.io.IOException;
+import java.util.Collections;
 import java.util.Objects;
 
 /**
@@ -51,6 +53,7 @@ public final class RestClientBuilder {
     private RestClient.FailureListener failureListener;
     private HttpClientConfigCallback httpClientConfigCallback;
     private RequestConfigCallback requestConfigCallback;
+    private String clusterName;
     private String pathPrefix;
 
     /**
@@ -133,6 +136,12 @@ public final class RestClientBuilder {
         return this;
     }
 
+    public RestClientBuilder setClusterName(String clusterName) {
+        Objects.requireNonNull(clusterName, "cluster name must not be null");
+        this.clusterName = clusterName;
+        return this;
+    }
+
     /**
      * Sets the path's prefix for every request used by the http client.
      * <p>
@@ -178,8 +187,19 @@ public final class RestClientBuilder {
             failureListener = new RestClient.FailureListener();
         }
         CloseableHttpAsyncClient httpClient = createHttpClient();
-        RestClient restClient = new RestClient(httpClient, maxRetryTimeout, defaultHeaders, hosts, pathPrefix, failureListener);
+        RestClient restClient = new RestClient(httpClient, maxRetryTimeout, defaultHeaders, hosts, pathPrefix, failureListener, clusterName);
         httpClient.start();
+        try {
+            //验证集群名是否正确，服务端验证
+            restClient.performRequest("GET", "/_cat/health", Collections.<String, String>emptyMap());
+        } catch (Exception e) {
+            try {
+                httpClient.close();
+            } catch (IOException e1) {
+                throw new IllegalArgumentException(e1);
+            }
+            throw new IllegalArgumentException(e);
+        }
         return restClient;
     }
 

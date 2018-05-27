@@ -95,18 +95,20 @@ public class RestClient implements Closeable {
     private final Header[] defaultHeaders;
     private final long maxRetryTimeoutMillis;
     private final String pathPrefix;
+    private final String clusterName;
     private final AtomicInteger lastHostIndex = new AtomicInteger(0);
     private volatile HostTuple<Set<HttpHost>> hostTuple;
     private final ConcurrentMap<HttpHost, DeadHostState> blacklist = new ConcurrentHashMap<>();
     private final FailureListener failureListener;
 
     RestClient(CloseableHttpAsyncClient client, long maxRetryTimeoutMillis, Header[] defaultHeaders,
-               HttpHost[] hosts, String pathPrefix, FailureListener failureListener) {
+               HttpHost[] hosts, String pathPrefix, FailureListener failureListener, String clusterName) {
         this.client = client;
         this.maxRetryTimeoutMillis = maxRetryTimeoutMillis;
         this.defaultHeaders = defaultHeaders;
         this.failureListener = failureListener;
         this.pathPrefix = pathPrefix;
+        this.clusterName = clusterName;
         setHosts(hosts);
     }
 
@@ -553,7 +555,7 @@ public class RestClient implements Closeable {
         return httpRequest;
     }
 
-    private static URI buildUri(String pathPrefix, String path, Map<String, String> params) {
+    private URI buildUri(String pathPrefix, String path, Map<String, String> params) {
         Objects.requireNonNull(path, "path must not be null");
         try {
             String fullPath;
@@ -571,6 +573,7 @@ public class RestClient implements Closeable {
             for (Map.Entry<String, String> param : params.entrySet()) {
                 uriBuilder.addParameter(param.getKey(), param.getValue());
             }
+            uriBuilder.addParameter("cluster.name", clusterName);
             return uriBuilder.build();
         } catch(URISyntaxException e) {
             throw new IllegalArgumentException(e.getMessage(), e);

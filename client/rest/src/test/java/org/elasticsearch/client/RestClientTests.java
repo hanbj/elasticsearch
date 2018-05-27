@@ -79,6 +79,6 @@ public class RestClientTests extends RestClientTestCase {
 
     private static RestClient createRestClient() {
         HttpHost[] hosts = new HttpHost[]{new HttpHost("localhost", 9200)};
-        return new RestClient(mock(CloseableHttpAsyncClient.class), randomLongBetween(1_000, 30_000), new Header[]{}, hosts, null, null);
+        return new RestClient(mock(CloseableHttpAsyncClient.class), randomLongBetween(1_000, 30_000), new Header[]{}, hosts, null, null, null);
     }
 }

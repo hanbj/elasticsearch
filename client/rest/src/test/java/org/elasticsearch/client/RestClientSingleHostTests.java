@@ -140,7 +140,7 @@ public class RestClientSingleHostTests extends RestClientTestCase {
         defaultHeaders = generateHeaders("Header-default", "Header-array", numHeaders);
         httpHost = new HttpHost("localhost", 9200);
         failureListener = new HostsTrackingFailureListener();
-        restClient = new RestClient(httpClient, 10000, defaultHeaders, new HttpHost[]{httpHost}, null, failureListener);
+        restClient = new RestClient(httpClient, 10000, defaultHeaders, new HttpHost[]{httpHost}, null, failureListener, null);
     }
 
     public void testNullPath() throws IOException {

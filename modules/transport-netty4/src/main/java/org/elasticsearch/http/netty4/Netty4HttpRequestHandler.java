@@ -25,8 +25,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.util.internal.StringUtil;
+import org.elasticsearch.cluster.ClusterName;
+import org.elasticsearch.common.settings.ClusterSettings;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.http.netty4.pipelining.HttpPipelinedRequest;
+import org.elasticsearch.rest.BytesRestResponse;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.transport.netty4.Netty4Utils;
 
 @ChannelHandler.Sharable
@@ -36,12 +42,14 @@ class Netty4HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
     private final boolean httpPipeliningEnabled;
     private final boolean detailedErrorsEnabled;
     private final ThreadContext threadContext;
+    private final Settings settings;
 
-    Netty4HttpRequestHandler(Netty4HttpServerTransport serverTransport, boolean detailedErrorsEnabled, ThreadContext threadContext) {
+    Netty4HttpRequestHandler(Netty4HttpServerTransport serverTransport, boolean detailedErrorsEnabled, ThreadContext threadContext, Settings settings) {
         this.serverTransport = serverTransport;
         this.httpPipeliningEnabled = serverTransport.pipelining;
         this.detailedErrorsEnabled = detailedErrorsEnabled;
         this.threadContext = threadContext;
+        this.settings = settings;
     }
 
     @Override
@@ -67,6 +75,12 @@ class Netty4HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
         final Netty4HttpRequest httpRequest = new Netty4HttpRequest(serverTransport.xContentRegistry, copy, ctx.channel());
         final Netty4HttpChannel channel =
                 new Netty4HttpChannel(serverTransport, httpRequest, pipelinedRequest, detailedErrorsEnabled, threadContext);
+
+        final String clusterName = httpRequest.params().remove(ClusterName.CLUSTER_NAME_SETTING.getKey());
+        if (StringUtil.isNullOrEmpty(clusterName) || !clusterName.equals(ClusterName.CLUSTER_NAME_SETTING.get(settings).value())) {
+            channel.sendResponse(new BytesRestResponse(RestStatus.NOT_ACCEPTABLE, "[cluster.name] is empty or not match"));
+            return;
+        }
 
         if (request.decoderResult().isSuccess()) {
             serverTransport.dispatchRequest(httpRequest, channel);
