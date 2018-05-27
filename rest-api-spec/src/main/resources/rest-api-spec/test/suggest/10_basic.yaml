@@ -1,0 +1,44 @@
+setup:
+  - do:
+      index:
+        index: test
+        type:  test
+        id:    testing_document
+        body:
+          body: Amsterdam meetup
+  - do:
+      indices.refresh: {}
+
+---
+"Basic tests for suggest API":
+
+  - do:
+      search:
+        body:
+          suggest:
+            test_suggestion:
+              text: "The Amsterdma meetpu"
+              term:
+                field: body
+
+  - match: {suggest.test_suggestion.1.options.0.text: amsterdam}
+  - match: {suggest.test_suggestion.2.options.0.text: meetup}
+
+---
+"Suggest API should have deprecation warning":
+  - skip:
+      features: 'warnings'
+      version: ' - 5.2.99'
+      reason: no deprecation logging prior to 5.2, log format changed in 5.3.0
+  - do:
+      warnings:
+        - "[POST /_suggest] is deprecated! Use [POST /_search] instead."
+      suggest:
+        body:
+          test_suggestion:
+            text: "The Amsterdma meetpu"
+            term:
+              field: body
+
+  - match: {test_suggestion.1.options.0.text: amsterdam}
+  - match: {test_suggestion.2.options.0.text: meetup}
