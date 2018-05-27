@@ -19,8 +19,12 @@
 
 package org.elasticsearch.http.netty3;
 
+import org.elasticsearch.cluster.ClusterName;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.http.netty3.pipelining.OrderedUpstreamMessageEvent;
+import org.elasticsearch.rest.BytesRestResponse;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.transport.netty3.Netty3Utils;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -36,12 +40,14 @@ public class Netty3HttpRequestHandler extends SimpleChannelUpstreamHandler {
     private final boolean httpPipeliningEnabled;
     private final boolean detailedErrorsEnabled;
     private final ThreadContext threadContext;
+    private final Settings settings;
 
-    public Netty3HttpRequestHandler(Netty3HttpServerTransport serverTransport, boolean detailedErrorsEnabled, ThreadContext threadContext) {
+    public Netty3HttpRequestHandler(Netty3HttpServerTransport serverTransport, boolean detailedErrorsEnabled, ThreadContext threadContext, Settings settings) {
         this.serverTransport = serverTransport;
         this.httpPipeliningEnabled = serverTransport.pipelining;
         this.detailedErrorsEnabled = detailedErrorsEnabled;
         this.threadContext = threadContext;
+        this.settings = settings;
     }
 
     @Override
@@ -59,6 +65,11 @@ public class Netty3HttpRequestHandler extends SimpleChannelUpstreamHandler {
         // when reading, or using a cumulation buffer
         Netty3HttpRequest httpRequest = new Netty3HttpRequest(serverTransport.xContentRegistry, request, e.getChannel());
         Netty3HttpChannel channel = new Netty3HttpChannel(serverTransport, httpRequest, oue, detailedErrorsEnabled, threadContext);
+        final String clusterName = httpRequest.params().remove(ClusterName.CLUSTER_NAME_SETTING.getKey());
+        if (clusterName == null || clusterName.isEmpty() || !clusterName.equals(ClusterName.CLUSTER_NAME_SETTING.get(settings).value())) {
+            channel.sendResponse(new BytesRestResponse(RestStatus.NOT_ACCEPTABLE, "[cluster.name] is empty or not match"));
+            return;
+        }
         serverTransport.dispatchRequest(httpRequest, channel);
         super.messageReceived(ctx, e);
     }

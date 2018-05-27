@@ -529,7 +529,7 @@ public class Netty3HttpServerTransport extends AbstractLifecycleComponent implem
     }
 
     public ChannelPipelineFactory configureServerChannelPipelineFactory() {
-        return new HttpChannelPipelineFactory(this, detailedErrorsEnabled, threadPool.getThreadContext());
+        return new HttpChannelPipelineFactory(this, detailedErrorsEnabled, threadPool.getThreadContext(), settings());
     }
 
     protected static class HttpChannelPipelineFactory implements ChannelPipelineFactory {
@@ -537,9 +537,9 @@ public class Netty3HttpServerTransport extends AbstractLifecycleComponent implem
         protected final Netty3HttpServerTransport transport;
         protected final Netty3HttpRequestHandler requestHandler;
 
-        public HttpChannelPipelineFactory(Netty3HttpServerTransport transport, boolean detailedErrorsEnabled, ThreadContext threadContext) {
+        public HttpChannelPipelineFactory(Netty3HttpServerTransport transport, boolean detailedErrorsEnabled, ThreadContext threadContext, Settings settings) {
             this.transport = transport;
-            this.requestHandler = new Netty3HttpRequestHandler(transport, detailedErrorsEnabled, threadContext);
+            this.requestHandler = new Netty3HttpRequestHandler(transport, detailedErrorsEnabled, threadContext, settings);
         }
 
         @Override
