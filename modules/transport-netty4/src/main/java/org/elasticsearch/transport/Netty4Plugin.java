@@ -19,6 +19,9 @@
 
 package org.elasticsearch.transport;
 
+import org.apache.lucene.util.SetOnce;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.network.NetworkModule;
 import org.elasticsearch.common.network.NetworkService;
@@ -26,17 +29,21 @@ import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.filter.IPFilter;
 import org.elasticsearch.http.HttpServerTransport;
 import org.elasticsearch.http.netty4.Netty4HttpServerTransport;
 import org.elasticsearch.indices.breaker.CircuitBreakerService;
 import org.elasticsearch.plugins.NetworkPlugin;
 import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.netty4.Netty4Transport;
 import org.elasticsearch.transport.netty4.Netty4Utils;
+import org.elasticsearch.watcher.ResourceWatcherService;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -47,6 +54,7 @@ public class Netty4Plugin extends Plugin implements NetworkPlugin {
         Netty4Utils.setup();
     }
 
+    protected final SetOnce<IPFilter> ipFilter = new SetOnce<>();
     public static final String NETTY_TRANSPORT_NAME = "netty4";
     public static final String NETTY_HTTP_TRANSPORT_NAME = "netty4";
 
@@ -71,7 +79,14 @@ public class Netty4Plugin extends Plugin implements NetworkPlugin {
             Netty4Transport.NETTY_RECEIVE_PREDICTOR_SIZE,
             Netty4Transport.NETTY_RECEIVE_PREDICTOR_MIN,
             Netty4Transport.NETTY_RECEIVE_PREDICTOR_MAX,
-            Netty4Transport.NETTY_BOSS_COUNT
+            Netty4Transport.NETTY_BOSS_COUNT,
+            IPFilter.ALLOW_BOUND_ADDRESSES_SETTING,
+            IPFilter.IP_FILTER_ENABLED_SETTING,
+            IPFilter.IP_FILTER_ENABLED_HTTP_SETTING,
+            IPFilter.HTTP_FILTER_ALLOW_SETTING,
+            IPFilter.HTTP_FILTER_DENY_SETTING,
+            IPFilter.TRANSPORT_FILTER_ALLOW_SETTING,
+            IPFilter.TRANSPORT_FILTER_DENY_SETTING
         );
     }
 
@@ -91,7 +106,7 @@ public class Netty4Plugin extends Plugin implements NetworkPlugin {
                                                           NamedWriteableRegistry namedWriteableRegistry,
                                                           NetworkService networkService) {
         return Collections.singletonMap(NETTY_TRANSPORT_NAME, () -> new Netty4Transport(settings, threadPool, networkService, bigArrays,
-            namedWriteableRegistry, circuitBreakerService));
+            namedWriteableRegistry, circuitBreakerService, ipFilter.get()));
     }
 
     @Override
@@ -102,6 +117,12 @@ public class Netty4Plugin extends Plugin implements NetworkPlugin {
                                                                         NetworkService networkService,
                                                                         HttpServerTransport.Dispatcher dispatcher) {
         return Collections.singletonMap(NETTY_HTTP_TRANSPORT_NAME,
-            () -> new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool, xContentRegistry, dispatcher));
+            () -> new Netty4HttpServerTransport(settings, networkService, bigArrays, threadPool, xContentRegistry, dispatcher, ipFilter.get()));
+    }
+
+    @Override
+    public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool, ResourceWatcherService resourceWatcherService, ScriptService scriptService, NamedXContentRegistry xContentRegistry) {
+        this.ipFilter.set(new IPFilter(clusterService.getSettings(), clusterService.getClusterSettings()));
+        return Collections.singletonList(ipFilter.get());
     }
 }

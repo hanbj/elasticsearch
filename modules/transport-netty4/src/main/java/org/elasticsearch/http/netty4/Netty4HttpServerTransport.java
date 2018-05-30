@@ -64,6 +64,8 @@ import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.filter.IPFilter;
+import org.elasticsearch.filter.IpFilterRemoteAddressFilter;
 import org.elasticsearch.http.BindHttpException;
 import org.elasticsearch.http.HttpInfo;
 import org.elasticsearch.http.HttpServerTransport;
@@ -164,6 +166,8 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
 
     protected final int workerCount;
 
+    protected final IPFilter ipFilter;
+
     protected final boolean blockingServer;
 
     protected final boolean pipelining;
@@ -214,7 +218,7 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
     private final Netty4CorsConfig corsConfig;
 
     public Netty4HttpServerTransport(Settings settings, NetworkService networkService, BigArrays bigArrays, ThreadPool threadPool,
-                                     NamedXContentRegistry xContentRegistry, Dispatcher dispatcher) {
+                                     NamedXContentRegistry xContentRegistry, Dispatcher dispatcher, IPFilter ipFilter) {
         super(settings);
         Netty4Utils.setAvailableProcessors(EsExecutors.PROCESSORS_SETTING.get(settings));
         this.networkService = networkService;
@@ -222,6 +226,7 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
         this.threadPool = threadPool;
         this.xContentRegistry = xContentRegistry;
         this.dispatcher = dispatcher;
+        this.ipFilter = ipFilter;
 
         ByteSizeValue maxContentLength = SETTING_HTTP_MAX_CONTENT_LENGTH.get(settings);
         this.maxChunkSize = SETTING_HTTP_MAX_CHUNK_SIZE.get(settings);
@@ -320,6 +325,7 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
             if (logger.isInfoEnabled()) {
                 logger.info("{}", boundAddress);
             }
+            this.ipFilter.setBoundHttpTransportAddress(this.boundAddress());
             success = true;
         } finally {
             if (success == false) {
@@ -544,7 +550,7 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
         return new HttpChannelHandler(this, detailedErrorsEnabled, threadPool.getThreadContext(), settings());
     }
 
-    protected static class HttpChannelHandler extends ChannelInitializer<Channel> {
+    protected class HttpChannelHandler extends ChannelInitializer<Channel> {
 
         private final Netty4HttpServerTransport transport;
         private final Netty4HttpRequestHandler requestHandler;
@@ -560,6 +566,7 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
         @Override
         protected void initChannel(Channel ch) throws Exception {
             ch.pipeline().addLast("openChannels", transport.serverOpenChannels);
+            ch.pipeline().addFirst("ip_filter", new IpFilterRemoteAddressFilter(ipFilter, IPFilter.HTTP_PROFILE_NAME));
             final HttpRequestDecoder decoder = new HttpRequestDecoder(
                 Math.toIntExact(transport.maxInitialLineLength.getBytes()),
                 Math.toIntExact(transport.maxHeaderSize.getBytes()),

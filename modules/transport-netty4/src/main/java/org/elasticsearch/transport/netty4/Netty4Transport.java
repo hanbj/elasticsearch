@@ -60,6 +60,8 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.util.concurrent.FutureUtils;
+import org.elasticsearch.filter.IPFilter;
+import org.elasticsearch.filter.IpFilterRemoteAddressFilter;
 import org.elasticsearch.indices.breaker.CircuitBreakerService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.ConnectTransportException;
@@ -125,6 +127,7 @@ public class Netty4Transport extends TcpTransport<Channel> {
     protected final int maxCompositeBufferComponents;
     protected final RecvByteBufAllocator recvByteBufAllocator;
     protected final int workerCount;
+    protected final IPFilter ipFilter;
     protected final ByteSizeValue receivePredictorMin;
     protected final ByteSizeValue receivePredictorMax;
     // package private for testing
@@ -133,9 +136,10 @@ public class Netty4Transport extends TcpTransport<Channel> {
     protected final Map<String, ServerBootstrap> serverBootstraps = newConcurrentMap();
 
     public Netty4Transport(Settings settings, ThreadPool threadPool, NetworkService networkService, BigArrays bigArrays,
-                          NamedWriteableRegistry namedWriteableRegistry, CircuitBreakerService circuitBreakerService) {
+                          NamedWriteableRegistry namedWriteableRegistry, CircuitBreakerService circuitBreakerService, IPFilter ipFilter) {
         super("netty", settings, threadPool, bigArrays, circuitBreakerService, namedWriteableRegistry, networkService);
         Netty4Utils.setAvailableProcessors(EsExecutors.PROCESSORS_SETTING.get(settings));
+        this.ipFilter = ipFilter;
         this.workerCount = WORKER_COUNT.get(settings);
         this.maxCumulationBufferCapacity = NETTY_MAX_CUMULATION_BUFFER_CAPACITY.get(settings);
         this.maxCompositeBufferComponents = NETTY_MAX_COMPOSITE_BUFFER_COMPONENTS.get(settings);
@@ -174,6 +178,9 @@ public class Netty4Transport extends TcpTransport<Channel> {
                 }
             }
             super.doStart();
+            if (this.ipFilter != null) {
+                this.ipFilter.setBoundTransportAddress(this.boundAddress(), this.profileBoundAddresses());
+            }
             success = true;
         } finally {
             if (success == false) {
@@ -476,6 +483,7 @@ public class Netty4Transport extends TcpTransport<Channel> {
         @Override
         protected void initChannel(Channel ch) throws Exception {
             ch.pipeline().addLast("open_channels", Netty4Transport.this.serverOpenChannels);
+            ch.pipeline().addFirst("ipfilter", new IpFilterRemoteAddressFilter(ipFilter, this.name));
             ch.pipeline().addLast("size", new Netty4SizeHeaderFrameDecoder());
             ch.pipeline().addLast("dispatcher", new Netty4MessageChannelHandler(Netty4Transport.this, name));
         }
