@@ -79,6 +79,7 @@ import org.elasticsearch.search.query.QuerySearchResult;
 import org.elasticsearch.search.query.ScrollQuerySearchResult;
 import org.elasticsearch.search.rescore.RescoreBuilder;
 import org.elasticsearch.search.searchafter.SearchAfterBuilder;
+import org.elasticsearch.search.slice.ExpiredCacheEntry;
 import org.elasticsearch.search.sort.SortAndFormats;
 import org.elasticsearch.search.sort.SortBuilder;
 import org.elasticsearch.search.suggest.Suggest;
@@ -118,6 +119,17 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
     public static final Setting<TimeValue> DEFAULT_SEARCH_TIMEOUT_SETTING =
         Setting.timeSetting("search.default_search_timeout", NO_TIMEOUT, Property.Dynamic, Property.NodeScope);
 
+    public static final Setting<Boolean> DEFAULT_SCROLL_ENABLED_SETTING =
+            Setting.boolSetting("scroll.enabled", true, Property.Dynamic, Property.NodeScope);
+
+    public static final Setting<TimeValue> DEFAULT_SCROLL_INTERVAL_SETTING =
+            Setting.timeSetting("scroll.interval", TimeValue.timeValueHours(2), Property.Dynamic, Property.NodeScope);
+
+    public static final Setting<Integer> DEFAULT_SCROLL_CONCURRENT_INDICES_SETTING =
+            Setting.intSetting("scroll.concurrent.indices", 1, 1, Property.Dynamic, Property.NodeScope);
+
+    public static final Setting<Long> DEFAULT_SCROLL_LIMIT_SETTING =
+            Setting.longSetting("scroll.limit", 200000, 1, Property.Dynamic, Property.NodeScope);
 
     private final ThreadPool threadPool;
 
@@ -145,6 +157,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     private final AtomicLong idGenerator = new AtomicLong();
 
+    private final ExpiredCacheEntry<String> expiredCacheEntry;
+    private volatile boolean scrollEnabled;
+    private volatile long scrollInterval;
+    private volatile Integer scrollConcurrent;
+    private volatile long scrollLimit;
+
     private final ConcurrentMapLong<SearchContext> activeContexts = ConcurrentCollections.newConcurrentMapLongWithAggressiveConcurrency();
 
     public SearchService(ClusterService clusterService, IndicesService indicesService,
@@ -168,10 +186,43 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
         lowLevelCancellation = LOW_LEVEL_CANCELLATION_SETTING.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(LOW_LEVEL_CANCELLATION_SETTING, this::setLowLevelCancellation);
+
+        scrollEnabled = DEFAULT_SCROLL_ENABLED_SETTING.get(settings);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(DEFAULT_SCROLL_ENABLED_SETTING, this::setScrollEnabled);
+
+        scrollInterval = DEFAULT_SCROLL_INTERVAL_SETTING.get(settings).millis();
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(DEFAULT_SCROLL_INTERVAL_SETTING, this::setScrollInterval);
+
+        scrollConcurrent = DEFAULT_SCROLL_CONCURRENT_INDICES_SETTING.get(settings);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(DEFAULT_SCROLL_CONCURRENT_INDICES_SETTING, this::setScrollConcurrent);
+
+        scrollLimit = DEFAULT_SCROLL_LIMIT_SETTING.get(settings);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(DEFAULT_SCROLL_LIMIT_SETTING, this::setScrollLimit);
+
+        expiredCacheEntry = new ExpiredCacheEntry<>(scrollInterval, entry -> logger.info("index: {} can scroll now.", entry.getIndex()));
     }
 
     private void setDefaultSearchTimeout(TimeValue defaultSearchTimeout) {
         this.defaultSearchTimeout = defaultSearchTimeout;
+    }
+
+    private void setScrollEnabled(Boolean scrollEnabled) {
+        this.scrollEnabled = scrollEnabled;
+        if (scrollEnabled == false) {
+            expiredCacheEntry.clear();
+        }
+    }
+
+    private void setScrollInterval(TimeValue scrollInterval) {
+        this.scrollInterval = scrollInterval.millis();
+    }
+
+    private void setScrollConcurrent(Integer current) {
+        this.scrollConcurrent = current;
+    }
+
+    private void setScrollLimit(Long count) {
+        this.scrollLimit = count;
     }
 
     private void setLowLevelCancellation(Boolean lowLevelCancellation) {
@@ -311,6 +362,20 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     public ScrollQuerySearchResult executeQueryPhase(InternalScrollSearchRequest request, SearchTask task) {
         final SearchContext context = findContext(request.id());
+        final Index index = context.request().shardId().getIndex();
+        if (scrollEnabled) {
+            if (expiredCacheEntry.containsKey(index.getName())) {
+                final ExpiredCacheEntry.Entry entry = expiredCacheEntry.update(index.getName(), context.size());
+                if (entry.getHits() > scrollLimit) {
+                    throw new IllegalArgumentException("only " + scrollLimit + " data can be exported.");
+                }
+            } else {
+                if (expiredCacheEntry.size() >= scrollConcurrent) {
+                    throw new IllegalArgumentException("only " + scrollConcurrent + " indexes are support exported at the same time.");
+                }
+                expiredCacheEntry.put(index.getName(), context.size());
+            }
+        }
         SearchOperationListener operationListener = context.indexShard().getSearchOperationListener();
         context.incRef();
         try {
@@ -376,6 +441,20 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     public ScrollQueryFetchSearchResult executeFetchPhase(InternalScrollSearchRequest request, SearchTask task) {
         final SearchContext context = findContext(request.id());
+        final Index index = context.request().shardId().getIndex();
+        if (scrollEnabled) {
+            if (expiredCacheEntry.containsKey(index.getName())) {
+                final ExpiredCacheEntry.Entry entry = expiredCacheEntry.update(index.getName(), context.size());
+                if (entry.getHits() > scrollLimit) {
+                    throw new IllegalArgumentException("only " + scrollLimit + " data can be exported.");
+                }
+            } else {
+                if (expiredCacheEntry.size() >= scrollConcurrent) {
+                    throw new IllegalArgumentException("only " + scrollConcurrent + " indexes are support exported at the same time.");
+                }
+                expiredCacheEntry.put(index.getName(), context.size());
+            }
+        }
         context.incRef();
         try {
             context.setTask(task);
