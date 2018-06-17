@@ -1485,7 +1485,7 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
     protected String handleRequest(Channel channel, String profileName, final StreamInput stream, long requestId, int messageLengthBytes,
                                    Version version, InetSocketAddress remoteAddress, byte status) throws IOException {
         final String action = stream.readString();
-        transportServiceAdapter.onRequestReceived(requestId, action);
+        transportServiceAdapter.onRequestReceived(requestId, action, remoteAddress);
         TransportChannel transportChannel = null;
         try {
             if (TransportStatus.isHandshake(status)) {

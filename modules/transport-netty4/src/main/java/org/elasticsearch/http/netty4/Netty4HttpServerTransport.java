@@ -506,6 +506,7 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
     }
 
     void dispatchRequest(final RestRequest request, final RestChannel channel) {
+        logger.info("[{}] received success request from [{}]", request.method().name() + " " + request.uri(), request.getRemoteAddress().toString());
         final ThreadContext threadContext = threadPool.getThreadContext();
         try (ThreadContext.StoredContext ignore = threadContext.stashContext()) {
             dispatcher.dispatchRequest(request, channel, threadContext);
@@ -513,6 +514,7 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
     }
 
     void dispatchBadRequest(final RestRequest request, final RestChannel channel, final Throwable cause) {
+        logger.error("[{}] received bad request from [{}]", request.method().name() + " " + request.uri(), request.getRemoteAddress().toString());
         final ThreadContext threadContext = threadPool.getThreadContext();
         try (ThreadContext.StoredContext ignore = threadContext.stashContext()) {
             dispatcher.dispatchBadRequest(request, channel, threadContext, cause);

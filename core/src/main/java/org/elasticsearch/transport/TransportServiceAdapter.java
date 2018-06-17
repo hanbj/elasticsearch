@@ -20,6 +20,9 @@
 package org.elasticsearch.transport;
 
 import org.elasticsearch.cluster.node.DiscoveryNode;
+import org.elasticsearch.common.transport.TransportAddress;
+
+import java.net.InetSocketAddress;
 
 public interface TransportServiceAdapter extends TransportConnectionListener {
 
@@ -47,7 +50,9 @@ public interface TransportServiceAdapter extends TransportConnectionListener {
      * called by the {@link Transport} implementation when an incoming request arrives but before
      * any parsing of it has happened (with the exception of the requestId and action)
      */
-    void onRequestReceived(long requestId, String action);
+    void onRequestReceived(long requestId, String action, InetSocketAddress remoteAddress);
+
+    void onRequestReceived(long requestId, String action, TransportAddress remoteAddress);
 
     RequestHandlerRegistry getRequestHandler(String action);
 }

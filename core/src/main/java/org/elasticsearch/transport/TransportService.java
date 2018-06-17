@@ -52,6 +52,7 @@ import org.elasticsearch.tasks.TaskManager;
 import org.elasticsearch.threadpool.ThreadPool;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -566,6 +567,7 @@ public class TransportService extends AbstractLifecycleComponent {
                 assert options.timeout() != null;
                 timeoutHandler.future = threadPool.schedule(options.timeout(), ThreadPool.Names.GENERIC, timeoutHandler);
             }
+            adapter.onRequestSent(node, requestId, action, request, options);
             connection.sendRequest(requestId, action, request, options); // local node optimization happens upstream
         } catch (final Exception e) {
             // usually happen either because we failed to connect to the node
@@ -610,7 +612,7 @@ public class TransportService extends AbstractLifecycleComponent {
         final DirectResponseChannel channel = new DirectResponseChannel(logger, localNode, action, requestId, adapter, threadPool);
         try {
             adapter.onRequestSent(localNode, requestId, action, request, options);
-            adapter.onRequestReceived(requestId, action);
+            adapter.onRequestReceived(requestId, action, localNode.getAddress());
             final RequestHandlerRegistry reg = adapter.getRequestHandler(action);
             if (reg == null) {
                 throw new ActionNotFoundTransportException("Action [" + action + "] not found");
@@ -771,14 +773,26 @@ public class TransportService extends AbstractLifecycleComponent {
         }
 
         @Override
-        public void onRequestReceived(long requestId, String action) {
+        public void onRequestReceived(long requestId, String action, InetSocketAddress address) {
             try {
                 blockIncomingRequestsLatch.await();
             } catch (InterruptedException e) {
                 logger.trace("interrupted while waiting for incoming requests block to be removed");
             }
             if (traceEnabled() && shouldTraceAction(action)) {
-                traceReceivedRequest(requestId, action);
+                traceReceivedRequest(requestId, action, address);
+            }
+        }
+
+        @Override
+        public void onRequestReceived(long requestId, String action, TransportAddress address) {
+            try {
+                blockIncomingRequestsLatch.await();
+            } catch (InterruptedException e) {
+                logger.trace("interrupted while waiting for incoming requests block to be removed");
+            }
+            if (traceEnabled() && shouldTraceAction(action)) {
+                traceReceivedRequest(requestId, action, address);
             }
         }
 
@@ -883,8 +897,12 @@ public class TransportService extends AbstractLifecycleComponent {
             }
         }
 
-        protected void traceReceivedRequest(long requestId, String action) {
-            tracerLog.trace("[{}][{}] received request", requestId, action);
+        protected void traceReceivedRequest(long requestId, String action, InetSocketAddress address) {
+            tracerLog.trace("[{}][{}] received request from [{}]", requestId, action, address.toString());
+        }
+
+        protected void traceReceivedRequest(long requestId, String action, TransportAddress address) {
+            tracerLog.trace("[{}][{}] received request from [{}]", requestId, action, address.toString());
         }
 
         protected void traceResponseSent(long requestId, String action) {
@@ -900,7 +918,7 @@ public class TransportService extends AbstractLifecycleComponent {
         }
 
         protected void traceRequestSent(DiscoveryNode node, long requestId, String action, TransportRequestOptions options) {
-            tracerLog.trace("[{}][{}] sent to [{}] (timeout: [{}])", requestId, action, node, options.timeout());
+            tracerLog.trace("[{}][{}] sent request to [{}] (timeout: [{}])", requestId, action, node, options.timeout());
         }
 
     }

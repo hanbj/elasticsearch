@@ -60,6 +60,7 @@ import org.elasticsearch.transport.TransportServiceAdapter;
 import org.elasticsearch.transport.local.LocalTransport;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -761,8 +762,8 @@ public final class MockTransportService extends TransportService {
         }
 
         @Override
-        protected void traceReceivedRequest(long requestId, String action) {
-            super.traceReceivedRequest(requestId, action);
+        protected void traceReceivedRequest(long requestId, String action, InetSocketAddress address) {
+            super.traceReceivedRequest(requestId, action, address);
             for (Tracer tracer : activeTracers) {
                 tracer.receivedRequest(requestId, action);
             }

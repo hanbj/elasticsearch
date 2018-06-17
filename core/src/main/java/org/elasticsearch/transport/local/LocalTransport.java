@@ -364,7 +364,7 @@ public class LocalTransport extends AbstractLifecycleComponent implements Transp
         stream = new NamedWriteableAwareStreamInput(stream, namedWriteableRegistry);
         final String action = stream.readString();
         final RequestHandlerRegistry reg = transportServiceAdapter.getRequestHandler(action);
-        transportServiceAdapter.onRequestReceived(requestId, action);
+        transportServiceAdapter.onRequestReceived(requestId, action, sourceTransport.localAddress);
         if (reg != null && reg.canTripCircuitBreaker()) {
             inFlightRequestsBreaker().addEstimateBytesAndMaybeBreak(messageLengthBytes, "<transport_request>");
         } else {
