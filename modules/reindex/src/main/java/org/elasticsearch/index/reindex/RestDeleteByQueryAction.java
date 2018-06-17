@@ -20,6 +20,8 @@
 package org.elasticsearch.index.reindex;
 
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.bulk.byscroll.AbstractBulkByQueryRestHandler;
+import org.elasticsearch.action.bulk.byscroll.DeleteByQueryAction;
 import org.elasticsearch.action.bulk.byscroll.DeleteByQueryRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.node.NodeClient;

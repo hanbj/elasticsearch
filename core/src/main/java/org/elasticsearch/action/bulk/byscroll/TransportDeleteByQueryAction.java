@@ -17,15 +17,10 @@
  * under the License.
  */
 
-package org.elasticsearch.index.reindex;
+package org.elasticsearch.action.bulk.byscroll;
 
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.bulk.byscroll.AsyncDeleteByQueryAction;
-import org.elasticsearch.action.bulk.byscroll.BulkByScrollParallelizationHelper;
-import org.elasticsearch.action.bulk.byscroll.BulkByScrollResponse;
-import org.elasticsearch.action.bulk.byscroll.DeleteByQueryRequest;
-import org.elasticsearch.action.bulk.byscroll.ParentBulkByScrollTask;
-import org.elasticsearch.action.bulk.byscroll.WorkingBulkByScrollTask;
+import org.elasticsearch.action.bulk.byscroll.*;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.client.Client;

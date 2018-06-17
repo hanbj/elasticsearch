@@ -350,8 +350,11 @@ import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.reindex.DeleteByQueryAction;
-import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.bulk.byscroll.DeleteByQueryAction;
+import org.elasticsearch.action.bulk.byscroll.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.bulk.byscroll.UpdateByQueryAction;
+import org.elasticsearch.action.bulk.byscroll.UpdateByQueryRequest;
+import org.elasticsearch.action.bulk.byscroll.UpdateByQueryRequestBuilder;
 import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.threadpool.ThreadPool;
 
@@ -457,6 +460,21 @@ public abstract class AbstractClient extends AbstractComponent implements Client
     @Override
     public UpdateRequestBuilder prepareUpdate(String index, String type, String id) {
         return new UpdateRequestBuilder(this, UpdateAction.INSTANCE, index, type, id);
+    }
+
+    @Override
+    public ActionFuture<BulkByScrollResponse> updateByQuery(final UpdateByQueryRequest request) {
+        return execute(UpdateByQueryAction.INSTANCE, request);
+    }
+
+    @Override
+    public void updateByQuery(final UpdateByQueryRequest request, final ActionListener<BulkByScrollResponse> listener) {
+        execute(UpdateByQueryAction.INSTANCE, request, listener);
+    }
+
+    @Override
+    public UpdateByQueryRequestBuilder prepareUpdateByQuery(String... source) {
+        return new UpdateByQueryRequestBuilder(this, UpdateByQueryAction.INSTANCE).source(source);
     }
 
     @Override

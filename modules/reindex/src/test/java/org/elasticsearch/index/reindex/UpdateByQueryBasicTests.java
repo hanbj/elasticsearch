@@ -19,6 +19,7 @@
 
 package org.elasticsearch.index.reindex;
 
+import org.elasticsearch.action.bulk.byscroll.UpdateByQueryRequestBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;

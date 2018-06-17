@@ -17,41 +17,35 @@
  * under the License.
  */
 
-package org.elasticsearch.index.reindex;
+package org.elasticsearch.action.bulk.byscroll;
 
 import org.elasticsearch.action.Action;
-import org.elasticsearch.action.bulk.byscroll.BulkByScrollResponse;
 import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.client.ElasticsearchClient;
 
-public class UpdateByQueryRequestBuilder extends
-        AbstractBulkIndexByScrollRequestBuilder<UpdateByQueryRequest, UpdateByQueryRequestBuilder> {
+public class DeleteByQueryRequestBuilder extends
+        AbstractBulkByScrollRequestBuilder<DeleteByQueryRequest, DeleteByQueryRequestBuilder> {
 
-    public UpdateByQueryRequestBuilder(ElasticsearchClient client,
-            Action<UpdateByQueryRequest, BulkByScrollResponse, UpdateByQueryRequestBuilder> action) {
+    public DeleteByQueryRequestBuilder(ElasticsearchClient client,
+                                       Action<DeleteByQueryRequest, BulkByScrollResponse, DeleteByQueryRequestBuilder> action) {
         this(client, action, new SearchRequestBuilder(client, SearchAction.INSTANCE));
     }
 
-    private UpdateByQueryRequestBuilder(ElasticsearchClient client,
-            Action<UpdateByQueryRequest, BulkByScrollResponse, UpdateByQueryRequestBuilder> action,
-            SearchRequestBuilder search) {
-        super(client, action, search, new UpdateByQueryRequest(search.request()));
+    private DeleteByQueryRequestBuilder(ElasticsearchClient client,
+                                        Action<DeleteByQueryRequest, BulkByScrollResponse, DeleteByQueryRequestBuilder> action,
+                                        SearchRequestBuilder search) {
+        super(client, action, search, new DeleteByQueryRequest(search.request()));
     }
 
     @Override
-    protected UpdateByQueryRequestBuilder self() {
+    protected DeleteByQueryRequestBuilder self() {
         return this;
     }
 
     @Override
-    public UpdateByQueryRequestBuilder abortOnVersionConflict(boolean abortOnVersionConflict) {
+    public DeleteByQueryRequestBuilder abortOnVersionConflict(boolean abortOnVersionConflict) {
         request.setAbortOnVersionConflict(abortOnVersionConflict);
-        return this;
-    }
-
-    public UpdateByQueryRequestBuilder setPipeline(String pipeline) {
-        request.setPipeline(pipeline);
         return this;
     }
 }

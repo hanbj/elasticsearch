@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.elasticsearch.index.reindex;
+package org.elasticsearch.action.bulk.byscroll;
 
 import org.elasticsearch.action.IndicesRequest;
 import org.elasticsearch.action.search.SearchRequest;
@@ -31,7 +31,7 @@ import java.io.IOException;
 /**
  * Request to update some documents. That means you can't change their type, id, index, or anything like that. This implements
  * CompositeIndicesRequest but in a misleading way. Rather than returning all the subrequests that it will make it tries to return a
- * representative set of subrequests. This is best-effort but better than {@linkplain ReindexRequest} because scripts can't change the
+ * representative set of subrequests. This is best-effort but better than {link ReindexRequest} because scripts can't change the
  * destination index and things.
  */
 public class UpdateByQueryRequest extends AbstractBulkIndexByScrollRequest<UpdateByQueryRequest> implements IndicesRequest.Replaceable {

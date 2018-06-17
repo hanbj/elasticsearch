@@ -18,7 +18,7 @@
  */
 
 /**
- * Actions that modify documents based on the results of a scrolling query like {@link ReindexAction}, {@link UpdateByQueryAction}, and
- * {@link DeleteByQueryAction}.
+ * Actions that modify documents based on the results of a scrolling query like {link ReindexAction}, {link UpdateByQueryAction}, and
+ * {link DeleteByQueryAction}.
  */
 package org.elasticsearch.index.reindex;

@@ -20,6 +20,8 @@
 package org.elasticsearch.index.reindex;
 
 import org.elasticsearch.action.ActionRequestValidationException;
+import org.elasticsearch.action.bulk.byscroll.DeleteByQueryAction;
+import org.elasticsearch.action.bulk.byscroll.UpdateByQueryAction;
 import org.elasticsearch.action.support.tasks.BaseTasksRequest;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;

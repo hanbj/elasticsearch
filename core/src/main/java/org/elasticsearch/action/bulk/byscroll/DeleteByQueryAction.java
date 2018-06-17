@@ -17,24 +17,23 @@
  * under the License.
  */
 
-package org.elasticsearch.index.reindex;
+package org.elasticsearch.action.bulk.byscroll;
 
 import org.elasticsearch.action.Action;
-import org.elasticsearch.action.bulk.byscroll.BulkByScrollResponse;
 import org.elasticsearch.client.ElasticsearchClient;
 
-public class UpdateByQueryAction extends
-        Action<UpdateByQueryRequest, BulkByScrollResponse, UpdateByQueryRequestBuilder> {
-    public static final UpdateByQueryAction INSTANCE = new UpdateByQueryAction();
-    public static final String NAME = "indices:data/write/update/byquery";
+public class DeleteByQueryAction extends Action<DeleteByQueryRequest, BulkByScrollResponse, DeleteByQueryRequestBuilder> {
 
-    private UpdateByQueryAction() {
+    public static final DeleteByQueryAction INSTANCE = new DeleteByQueryAction();
+    public static final String NAME = "indices:data/write/delete/byquery";
+
+    private DeleteByQueryAction() {
         super(NAME);
     }
 
     @Override
-    public UpdateByQueryRequestBuilder newRequestBuilder(ElasticsearchClient client) {
-        return new UpdateByQueryRequestBuilder(client, this);
+    public DeleteByQueryRequestBuilder newRequestBuilder(ElasticsearchClient client) {
+        return new DeleteByQueryRequestBuilder(client, this);
     }
 
     @Override

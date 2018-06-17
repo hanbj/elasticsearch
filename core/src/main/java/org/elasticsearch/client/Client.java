@@ -26,6 +26,9 @@ import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.bulk.byscroll.BulkByScrollResponse;
 import org.elasticsearch.action.bulk.byscroll.DeleteByQueryRequest;
+import org.elasticsearch.action.bulk.byscroll.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.bulk.byscroll.UpdateByQueryRequest;
+import org.elasticsearch.action.bulk.byscroll.UpdateByQueryRequestBuilder;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.delete.DeleteResponse;
@@ -73,7 +76,6 @@ import org.elasticsearch.common.lease.Releasable;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.index.reindex.DeleteByQueryRequestBuilder;
 
 import java.util.Map;
 
@@ -162,6 +164,27 @@ public interface Client extends ElasticsearchClient, Releasable {
      * Updates a document based on a script.
      */
     UpdateRequestBuilder prepareUpdate(String index, String type, String id);
+
+    /**
+     * Updates documents based on a script.
+     *
+     * @param request The update request
+     * @return The result future
+     */
+    ActionFuture<BulkByScrollResponse> updateByQuery(final UpdateByQueryRequest request);
+
+    /**
+     * Updates documents based on a script.
+     *
+     * @param request  The update request
+     * @param listener A listener to be notified with a result
+     */
+    void updateByQuery(final UpdateByQueryRequest request, final ActionListener<BulkByScrollResponse> listener);
+
+    /**
+     * Updates a document based on a script.
+     */
+    UpdateByQueryRequestBuilder prepareUpdateByQuery(String... source);
 
     /**
      * Index a document associated with a given index and type.

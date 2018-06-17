@@ -20,6 +20,9 @@
 package org.elasticsearch.index.reindex;
 
 import org.elasticsearch.ElasticsearchParseException;
+import org.elasticsearch.action.bulk.byscroll.AbstractBulkByQueryRestHandler;
+import org.elasticsearch.action.bulk.byscroll.UpdateByQueryAction;
+import org.elasticsearch.action.bulk.byscroll.UpdateByQueryRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.settings.Settings;
