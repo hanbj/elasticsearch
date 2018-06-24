@@ -915,7 +915,7 @@ public class ZenDiscovery extends AbstractLifecycleComponent implements Discover
         // nodes discovered during pinging
         List<ElectMasterService.MasterCandidate> masterCandidates = new ArrayList<>();
         for (ZenPing.PingResponse pingResponse : pingResponses) {
-            if (pingResponse.node().isMasterNode()) {
+            if (pingResponse.node().isMasterNode() || pingResponse.node().isIngestNode()) {
                 masterCandidates.add(new ElectMasterService.MasterCandidate(pingResponse.node(), pingResponse.getClusterStateVersion()));
             }
         }
@@ -941,7 +941,7 @@ public class ZenDiscovery extends AbstractLifecycleComponent implements Discover
     static List<ZenPing.PingResponse> filterPingResponses(List<ZenPing.PingResponse> fullPingResponses, boolean masterElectionIgnoreNonMasters, Logger logger) {
         List<ZenPing.PingResponse> pingResponses;
         if (masterElectionIgnoreNonMasters) {
-            pingResponses = fullPingResponses.stream().filter(ping -> ping.node().isMasterNode()).collect(Collectors.toList());
+            pingResponses = fullPingResponses.stream().filter(ping -> ping.node().isMasterNode() || ping.node().isIngestNode()).collect(Collectors.toList());
         } else {
             pingResponses = fullPingResponses;
         }
